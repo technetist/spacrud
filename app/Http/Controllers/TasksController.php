@@ -16,9 +16,8 @@ class TasksController extends Controller
     public function index()
     {
         $tasks = Auth::user()->tasks;
-        return response()->json([
-           'tasks' => $tasks
-        ], 200);
+        $json = json_encode(['tasks' => $tasks]);
+        return response()->json($json, 200);
     }
 
     /**
@@ -51,7 +50,7 @@ class TasksController extends Controller
 
         return response([
             'task' => $task,
-            'message' => 'created'
+            'message' => 'Task Created!'
         ], 201);
     }
 
@@ -91,11 +90,12 @@ class TasksController extends Controller
             'body' => 'required',
         ]);
 
-        $task = $request->user()->tasks()->whereId($id)->update($request->all());
+        $request->user()->tasks()->whereId($id)->update($request->all());
 
+        $task = Task::find($id);
         return response([
             'task' => $task,
-            'message' => 'updated'
+            'message' => 'Task Updated!'
         ], 200);
     }
 
@@ -109,7 +109,7 @@ class TasksController extends Controller
     {
         $task->delete();
         return response([
-            'message' => 'deleted'
+            'message' => 'Deleted Task!'
         ], 200);
     }
 }

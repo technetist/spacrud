@@ -1796,6 +1796,8 @@ __webpack_require__.r(__webpack_exports__);
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony import */ var toastr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! toastr */ "./node_modules/toastr/toastr.js");
+/* harmony import */ var toastr__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(toastr__WEBPACK_IMPORTED_MODULE_0__);
 //
 //
 //
@@ -1866,25 +1868,57 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
       task: {
+        id: '',
         name: '',
         body: ''
       },
       errors: [],
       tasks: [],
-      uri: 'http://spacrud.test/tasks/'
+      uri: 'http://spacrud.test/tasks/',
+      mode: 'adding',
+      currentIndex: '',
+      image: 'svg/loading.svg',
+      loading: false
     };
   },
   methods: {
     loadTasks: function loadTasks() {
       var _this = this;
 
+      this.loading = true;
       axios.get(this.uri).then(function (response) {
-        _this.tasks = response.data.tasks;
+        _this.tasks = JSON.parse(response.data).tasks;
+        _this.loading = false;
       });
+    },
+    loadCreateTasksModal: function loadCreateTasksModal() {
+      this.mode = 'adding';
+      this.task = {
+        id: '',
+        name: '',
+        body: ''
+      };
     },
     createTask: function createTask() {
       var _this2 = this;
@@ -1892,7 +1926,8 @@ __webpack_require__.r(__webpack_exports__);
       axios.post(this.uri, this.task).then(function (response) {
         _this2.tasks.push(response.data.task);
 
-        $('#createTaskModal').modal('hide');
+        $('#taskModal').modal('hide');
+        toastr__WEBPACK_IMPORTED_MODULE_0___default.a.success(response.data.message);
       }).catch(function (error) {
         _this2.errors = [];
 
@@ -1904,6 +1939,61 @@ __webpack_require__.r(__webpack_exports__);
           _this2.errors.push(error.response.data.errors.body[0]);
         }
       });
+    },
+    loadEditTaskModal: function loadEditTaskModal(index) {
+      this.task = {
+        id: this.tasks[index].id,
+        name: this.tasks[index].name,
+        body: this.tasks[index].body
+      };
+      this.currentIndex = index;
+      this.mode = 'editing';
+    },
+    editTask: function editTask(id) {
+      var _this3 = this;
+
+      axios.put(this.uri + id, this.task).then(function (response) {
+        Vue.set(_this3.tasks, _this3.currentIndex, {
+          id: response.data.task.id,
+          name: response.data.task.name,
+          body: response.data.task.body
+        });
+        $('#taskModal').modal('hide');
+        toastr__WEBPACK_IMPORTED_MODULE_0___default.a.success(response.data.message);
+      }).catch(function (error) {
+        _this3.errors = [];
+
+        if (error.response.data.errors.name) {
+          _this3.errors.push(error.response.data.errors.name[0]);
+        }
+
+        if (error.response.data.errors.body) {
+          _this3.errors.push(error.response.data.errors.body[0]);
+        }
+      });
+    },
+    deleteTask: function deleteTask(index) {
+      var _this4 = this;
+
+      var confirmation = confirm('Do you want to delete this task?');
+
+      if (confirmation) {
+        axios.delete(this.uri + this.tasks[index].id).then(function (response) {
+          _this4.$delete(_this4.tasks, index);
+
+          toastr__WEBPACK_IMPORTED_MODULE_0___default.a.success(response.data.message);
+        }).catch(function (error) {
+          _this4.errors = [];
+
+          if (error.response.data.errors.name) {
+            _this4.errors.push(error.response.data.errors.name[0]);
+          }
+
+          if (error.response.data.errors.body) {
+            _this4.errors.push(error.response.data.errors.body[0]);
+          }
+        });
+      }
     }
   },
   mounted: function mounted() {
@@ -36745,6 +36835,488 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 
 /***/ }),
 
+/***/ "./node_modules/toastr/toastr.js":
+/*!***************************************!*\
+  !*** ./node_modules/toastr/toastr.js ***!
+  \***************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
+ * Toastr
+ * Copyright 2012-2015
+ * Authors: John Papa, Hans Fjällemark, and Tim Ferrell.
+ * All Rights Reserved.
+ * Use, reproduction, distribution, and modification of this code is subject to the terms and
+ * conditions of the MIT license, available at http://www.opensource.org/licenses/mit-license.php
+ *
+ * ARIA Support: Greta Krafsig
+ *
+ * Project: https://github.com/CodeSeven/toastr
+ */
+/* global define */
+(function (define) {
+    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js")], __WEBPACK_AMD_DEFINE_RESULT__ = (function ($) {
+        return (function () {
+            var $container;
+            var listener;
+            var toastId = 0;
+            var toastType = {
+                error: 'error',
+                info: 'info',
+                success: 'success',
+                warning: 'warning'
+            };
+
+            var toastr = {
+                clear: clear,
+                remove: remove,
+                error: error,
+                getContainer: getContainer,
+                info: info,
+                options: {},
+                subscribe: subscribe,
+                success: success,
+                version: '2.1.4',
+                warning: warning
+            };
+
+            var previousToast;
+
+            return toastr;
+
+            ////////////////
+
+            function error(message, title, optionsOverride) {
+                return notify({
+                    type: toastType.error,
+                    iconClass: getOptions().iconClasses.error,
+                    message: message,
+                    optionsOverride: optionsOverride,
+                    title: title
+                });
+            }
+
+            function getContainer(options, create) {
+                if (!options) { options = getOptions(); }
+                $container = $('#' + options.containerId);
+                if ($container.length) {
+                    return $container;
+                }
+                if (create) {
+                    $container = createContainer(options);
+                }
+                return $container;
+            }
+
+            function info(message, title, optionsOverride) {
+                return notify({
+                    type: toastType.info,
+                    iconClass: getOptions().iconClasses.info,
+                    message: message,
+                    optionsOverride: optionsOverride,
+                    title: title
+                });
+            }
+
+            function subscribe(callback) {
+                listener = callback;
+            }
+
+            function success(message, title, optionsOverride) {
+                return notify({
+                    type: toastType.success,
+                    iconClass: getOptions().iconClasses.success,
+                    message: message,
+                    optionsOverride: optionsOverride,
+                    title: title
+                });
+            }
+
+            function warning(message, title, optionsOverride) {
+                return notify({
+                    type: toastType.warning,
+                    iconClass: getOptions().iconClasses.warning,
+                    message: message,
+                    optionsOverride: optionsOverride,
+                    title: title
+                });
+            }
+
+            function clear($toastElement, clearOptions) {
+                var options = getOptions();
+                if (!$container) { getContainer(options); }
+                if (!clearToast($toastElement, options, clearOptions)) {
+                    clearContainer(options);
+                }
+            }
+
+            function remove($toastElement) {
+                var options = getOptions();
+                if (!$container) { getContainer(options); }
+                if ($toastElement && $(':focus', $toastElement).length === 0) {
+                    removeToast($toastElement);
+                    return;
+                }
+                if ($container.children().length) {
+                    $container.remove();
+                }
+            }
+
+            // internal functions
+
+            function clearContainer (options) {
+                var toastsToClear = $container.children();
+                for (var i = toastsToClear.length - 1; i >= 0; i--) {
+                    clearToast($(toastsToClear[i]), options);
+                }
+            }
+
+            function clearToast ($toastElement, options, clearOptions) {
+                var force = clearOptions && clearOptions.force ? clearOptions.force : false;
+                if ($toastElement && (force || $(':focus', $toastElement).length === 0)) {
+                    $toastElement[options.hideMethod]({
+                        duration: options.hideDuration,
+                        easing: options.hideEasing,
+                        complete: function () { removeToast($toastElement); }
+                    });
+                    return true;
+                }
+                return false;
+            }
+
+            function createContainer(options) {
+                $container = $('<div/>')
+                    .attr('id', options.containerId)
+                    .addClass(options.positionClass);
+
+                $container.appendTo($(options.target));
+                return $container;
+            }
+
+            function getDefaults() {
+                return {
+                    tapToDismiss: true,
+                    toastClass: 'toast',
+                    containerId: 'toast-container',
+                    debug: false,
+
+                    showMethod: 'fadeIn', //fadeIn, slideDown, and show are built into jQuery
+                    showDuration: 300,
+                    showEasing: 'swing', //swing and linear are built into jQuery
+                    onShown: undefined,
+                    hideMethod: 'fadeOut',
+                    hideDuration: 1000,
+                    hideEasing: 'swing',
+                    onHidden: undefined,
+                    closeMethod: false,
+                    closeDuration: false,
+                    closeEasing: false,
+                    closeOnHover: true,
+
+                    extendedTimeOut: 1000,
+                    iconClasses: {
+                        error: 'toast-error',
+                        info: 'toast-info',
+                        success: 'toast-success',
+                        warning: 'toast-warning'
+                    },
+                    iconClass: 'toast-info',
+                    positionClass: 'toast-top-right',
+                    timeOut: 5000, // Set timeOut and extendedTimeOut to 0 to make it sticky
+                    titleClass: 'toast-title',
+                    messageClass: 'toast-message',
+                    escapeHtml: false,
+                    target: 'body',
+                    closeHtml: '<button type="button">&times;</button>',
+                    closeClass: 'toast-close-button',
+                    newestOnTop: true,
+                    preventDuplicates: false,
+                    progressBar: false,
+                    progressClass: 'toast-progress',
+                    rtl: false
+                };
+            }
+
+            function publish(args) {
+                if (!listener) { return; }
+                listener(args);
+            }
+
+            function notify(map) {
+                var options = getOptions();
+                var iconClass = map.iconClass || options.iconClass;
+
+                if (typeof (map.optionsOverride) !== 'undefined') {
+                    options = $.extend(options, map.optionsOverride);
+                    iconClass = map.optionsOverride.iconClass || iconClass;
+                }
+
+                if (shouldExit(options, map)) { return; }
+
+                toastId++;
+
+                $container = getContainer(options, true);
+
+                var intervalId = null;
+                var $toastElement = $('<div/>');
+                var $titleElement = $('<div/>');
+                var $messageElement = $('<div/>');
+                var $progressElement = $('<div/>');
+                var $closeElement = $(options.closeHtml);
+                var progressBar = {
+                    intervalId: null,
+                    hideEta: null,
+                    maxHideTime: null
+                };
+                var response = {
+                    toastId: toastId,
+                    state: 'visible',
+                    startTime: new Date(),
+                    options: options,
+                    map: map
+                };
+
+                personalizeToast();
+
+                displayToast();
+
+                handleEvents();
+
+                publish(response);
+
+                if (options.debug && console) {
+                    console.log(response);
+                }
+
+                return $toastElement;
+
+                function escapeHtml(source) {
+                    if (source == null) {
+                        source = '';
+                    }
+
+                    return source
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                }
+
+                function personalizeToast() {
+                    setIcon();
+                    setTitle();
+                    setMessage();
+                    setCloseButton();
+                    setProgressBar();
+                    setRTL();
+                    setSequence();
+                    setAria();
+                }
+
+                function setAria() {
+                    var ariaValue = '';
+                    switch (map.iconClass) {
+                        case 'toast-success':
+                        case 'toast-info':
+                            ariaValue =  'polite';
+                            break;
+                        default:
+                            ariaValue = 'assertive';
+                    }
+                    $toastElement.attr('aria-live', ariaValue);
+                }
+
+                function handleEvents() {
+                    if (options.closeOnHover) {
+                        $toastElement.hover(stickAround, delayedHideToast);
+                    }
+
+                    if (!options.onclick && options.tapToDismiss) {
+                        $toastElement.click(hideToast);
+                    }
+
+                    if (options.closeButton && $closeElement) {
+                        $closeElement.click(function (event) {
+                            if (event.stopPropagation) {
+                                event.stopPropagation();
+                            } else if (event.cancelBubble !== undefined && event.cancelBubble !== true) {
+                                event.cancelBubble = true;
+                            }
+
+                            if (options.onCloseClick) {
+                                options.onCloseClick(event);
+                            }
+
+                            hideToast(true);
+                        });
+                    }
+
+                    if (options.onclick) {
+                        $toastElement.click(function (event) {
+                            options.onclick(event);
+                            hideToast();
+                        });
+                    }
+                }
+
+                function displayToast() {
+                    $toastElement.hide();
+
+                    $toastElement[options.showMethod](
+                        {duration: options.showDuration, easing: options.showEasing, complete: options.onShown}
+                    );
+
+                    if (options.timeOut > 0) {
+                        intervalId = setTimeout(hideToast, options.timeOut);
+                        progressBar.maxHideTime = parseFloat(options.timeOut);
+                        progressBar.hideEta = new Date().getTime() + progressBar.maxHideTime;
+                        if (options.progressBar) {
+                            progressBar.intervalId = setInterval(updateProgress, 10);
+                        }
+                    }
+                }
+
+                function setIcon() {
+                    if (map.iconClass) {
+                        $toastElement.addClass(options.toastClass).addClass(iconClass);
+                    }
+                }
+
+                function setSequence() {
+                    if (options.newestOnTop) {
+                        $container.prepend($toastElement);
+                    } else {
+                        $container.append($toastElement);
+                    }
+                }
+
+                function setTitle() {
+                    if (map.title) {
+                        var suffix = map.title;
+                        if (options.escapeHtml) {
+                            suffix = escapeHtml(map.title);
+                        }
+                        $titleElement.append(suffix).addClass(options.titleClass);
+                        $toastElement.append($titleElement);
+                    }
+                }
+
+                function setMessage() {
+                    if (map.message) {
+                        var suffix = map.message;
+                        if (options.escapeHtml) {
+                            suffix = escapeHtml(map.message);
+                        }
+                        $messageElement.append(suffix).addClass(options.messageClass);
+                        $toastElement.append($messageElement);
+                    }
+                }
+
+                function setCloseButton() {
+                    if (options.closeButton) {
+                        $closeElement.addClass(options.closeClass).attr('role', 'button');
+                        $toastElement.prepend($closeElement);
+                    }
+                }
+
+                function setProgressBar() {
+                    if (options.progressBar) {
+                        $progressElement.addClass(options.progressClass);
+                        $toastElement.prepend($progressElement);
+                    }
+                }
+
+                function setRTL() {
+                    if (options.rtl) {
+                        $toastElement.addClass('rtl');
+                    }
+                }
+
+                function shouldExit(options, map) {
+                    if (options.preventDuplicates) {
+                        if (map.message === previousToast) {
+                            return true;
+                        } else {
+                            previousToast = map.message;
+                        }
+                    }
+                    return false;
+                }
+
+                function hideToast(override) {
+                    var method = override && options.closeMethod !== false ? options.closeMethod : options.hideMethod;
+                    var duration = override && options.closeDuration !== false ?
+                        options.closeDuration : options.hideDuration;
+                    var easing = override && options.closeEasing !== false ? options.closeEasing : options.hideEasing;
+                    if ($(':focus', $toastElement).length && !override) {
+                        return;
+                    }
+                    clearTimeout(progressBar.intervalId);
+                    return $toastElement[method]({
+                        duration: duration,
+                        easing: easing,
+                        complete: function () {
+                            removeToast($toastElement);
+                            clearTimeout(intervalId);
+                            if (options.onHidden && response.state !== 'hidden') {
+                                options.onHidden();
+                            }
+                            response.state = 'hidden';
+                            response.endTime = new Date();
+                            publish(response);
+                        }
+                    });
+                }
+
+                function delayedHideToast() {
+                    if (options.timeOut > 0 || options.extendedTimeOut > 0) {
+                        intervalId = setTimeout(hideToast, options.extendedTimeOut);
+                        progressBar.maxHideTime = parseFloat(options.extendedTimeOut);
+                        progressBar.hideEta = new Date().getTime() + progressBar.maxHideTime;
+                    }
+                }
+
+                function stickAround() {
+                    clearTimeout(intervalId);
+                    progressBar.hideEta = 0;
+                    $toastElement.stop(true, true)[options.showMethod](
+                        {duration: options.showDuration, easing: options.showEasing}
+                    );
+                }
+
+                function updateProgress() {
+                    var percentage = ((progressBar.hideEta - (new Date().getTime())) / progressBar.maxHideTime) * 100;
+                    $progressElement.width(percentage + '%');
+                }
+            }
+
+            function getOptions() {
+                return $.extend({}, getDefaults(), toastr.options);
+            }
+
+            function removeToast($toastElement) {
+                if (!$container) { $container = getContainer(); }
+                if ($toastElement.is(':visible')) {
+                    return;
+                }
+                $toastElement.remove();
+                $toastElement = null;
+                if ($container.children().length === 0) {
+                    $container.remove();
+                    previousToast = undefined;
+                }
+            }
+
+        })();
+    }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+}(__webpack_require__(/*! !webpack amd define */ "./node_modules/webpack/buildin/amd-define.js")));
+
+
+/***/ }),
+
 /***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/vue-loader/lib/index.js?!./resources/js/components/ExampleComponent.vue?vue&type=template&id=299e239e&":
 /*!*******************************************************************************************************************************************************************************************************************!*\
   !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib??vue-loader-options!./resources/js/components/ExampleComponent.vue?vue&type=template&id=299e239e& ***!
@@ -36808,150 +37380,230 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("div", [
-    _c(
-      "button",
-      {
-        staticClass: "btn btn-primary btn-block",
-        attrs: { "data-toggle": "modal", "data-target": "#createTaskModal" }
-      },
-      [_vm._v("Add Task")]
-    ),
-    _vm._v(" "),
-    _vm.tasks
-      ? _c("table", { staticClass: "table" }, [
-          _vm._m(0),
+    _vm.loading
+      ? _c("div", [
+          _c("img", {
+            staticClass: "mx-auto d-block",
+            attrs: { src: _vm.image, alt: "loading image" }
+          })
+        ])
+      : _c("div", [
+          _c(
+            "button",
+            {
+              staticClass: "btn btn-primary btn-block",
+              attrs: { "data-toggle": "modal", "data-target": "#taskModal" },
+              on: { click: _vm.loadCreateTasksModal }
+            },
+            [_vm._v("Add Task\n        ")]
+          ),
+          _vm._v(" "),
+          _vm.tasks
+            ? _c("table", { staticClass: "table" }, [
+                _vm._m(0),
+                _vm._v(" "),
+                _c(
+                  "tbody",
+                  _vm._l(_vm.tasks, function(task, index) {
+                    return _c("tr", [
+                      _c("td", [_vm._v(_vm._s(index + 1))]),
+                      _vm._v(" "),
+                      _c("td", [_vm._v(_vm._s(task.name))]),
+                      _vm._v(" "),
+                      _c("td", [_vm._v(_vm._s(task.body))]),
+                      _vm._v(" "),
+                      _c("td", [
+                        _c(
+                          "button",
+                          {
+                            staticClass: "btn btn-info",
+                            attrs: {
+                              "data-toggle": "modal",
+                              "data-target": "#taskModal"
+                            },
+                            on: {
+                              click: function($event) {
+                                _vm.loadEditTaskModal(index)
+                              }
+                            }
+                          },
+                          [_vm._v("Edit\n                    ")]
+                        )
+                      ]),
+                      _vm._v(" "),
+                      _c("td", [
+                        _c(
+                          "button",
+                          {
+                            staticClass: "btn btn-danger",
+                            on: {
+                              click: function($event) {
+                                _vm.deleteTask(index)
+                              }
+                            }
+                          },
+                          [_vm._v("Delete")]
+                        )
+                      ])
+                    ])
+                  }),
+                  0
+                )
+              ])
+            : _vm._e(),
           _vm._v(" "),
           _c(
-            "tbody",
-            _vm._l(_vm.tasks, function(task, index) {
-              return _c("tr", [
-                _c("td", [_vm._v(_vm._s(index + 1))]),
-                _vm._v(" "),
-                _c("td", [_vm._v(_vm._s(task.name))]),
-                _vm._v(" "),
-                _c("td", [_vm._v(_vm._s(task.body))]),
-                _vm._v(" "),
-                _vm._m(1, true),
-                _vm._v(" "),
-                _vm._m(2, true)
-              ])
-            }),
-            0
+            "div",
+            {
+              staticClass: "modal fade",
+              attrs: {
+                id: "taskModal",
+                tabindex: "-1",
+                role: "dialog",
+                "aria-labelledby": "taskModalLabel",
+                "aria-hidden": "true"
+              }
+            },
+            [
+              _c(
+                "div",
+                { staticClass: "modal-dialog", attrs: { role: "form" } },
+                [
+                  _c("div", { staticClass: "modal-content" }, [
+                    _vm._m(1),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "modal-body" }, [
+                      _vm.errors.length > 0
+                        ? _c("div", { staticClass: "alert alert-danger" }, [
+                            _c(
+                              "ul",
+                              _vm._l(_vm.errors, function(error) {
+                                return _c("li", [_vm._v(_vm._s(error))])
+                              }),
+                              0
+                            )
+                          ])
+                        : _vm._e(),
+                      _vm._v(" "),
+                      _c(
+                        "form",
+                        { staticClass: "form", attrs: { action: "#" } },
+                        [
+                          _c("div", { staticClass: "form-group" }, [
+                            _c("label", { attrs: { for: "name" } }, [
+                              _vm._v("Name")
+                            ]),
+                            _vm._v(" "),
+                            _c("input", {
+                              directives: [
+                                {
+                                  name: "model",
+                                  rawName: "v-model",
+                                  value: _vm.task.name,
+                                  expression: "task.name"
+                                }
+                              ],
+                              staticClass: "form-control",
+                              attrs: { type: "text", id: "name", name: "name" },
+                              domProps: { value: _vm.task.name },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
+                                  }
+                                  _vm.$set(
+                                    _vm.task,
+                                    "name",
+                                    $event.target.value
+                                  )
+                                }
+                              }
+                            })
+                          ]),
+                          _vm._v(" "),
+                          _c("div", { staticClass: "form-group" }, [
+                            _c("label", { attrs: { for: "body" } }, [
+                              _vm._v("Description")
+                            ]),
+                            _vm._v(" "),
+                            _c("input", {
+                              directives: [
+                                {
+                                  name: "model",
+                                  rawName: "v-model",
+                                  value: _vm.task.body,
+                                  expression: "task.body"
+                                }
+                              ],
+                              staticClass: "form-control",
+                              attrs: { type: "text", id: "body", name: "body" },
+                              domProps: { value: _vm.task.body },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
+                                  }
+                                  _vm.$set(
+                                    _vm.task,
+                                    "body",
+                                    $event.target.value
+                                  )
+                                }
+                              }
+                            })
+                          ])
+                        ]
+                      )
+                    ]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "modal-footer" }, [
+                      _c(
+                        "button",
+                        {
+                          staticClass: "btn btn-secondary",
+                          attrs: { type: "button", "data-dismiss": "modal" }
+                        },
+                        [_vm._v("Close")]
+                      ),
+                      _vm._v(" "),
+                      _vm.mode === "adding"
+                        ? _c(
+                            "button",
+                            {
+                              staticClass: "btn btn-primary",
+                              attrs: { type: "button" },
+                              on: { click: _vm.createTask }
+                            },
+                            [
+                              _vm._v(
+                                "\n                            Add\n                            Task\n                        "
+                              )
+                            ]
+                          )
+                        : _vm._e(),
+                      _vm._v(" "),
+                      _vm.mode === "editing"
+                        ? _c(
+                            "button",
+                            {
+                              staticClass: "btn btn-primary",
+                              attrs: { type: "button" },
+                              on: {
+                                click: function($event) {
+                                  _vm.editTask(_vm.task.id)
+                                }
+                              }
+                            },
+                            [_vm._v("Update Task\n                        ")]
+                          )
+                        : _vm._e()
+                    ])
+                  ])
+                ]
+              )
+            ]
           )
         ])
-      : _vm._e(),
-    _vm._v(" "),
-    _c(
-      "div",
-      {
-        staticClass: "modal fade",
-        attrs: {
-          id: "createTaskModal",
-          tabindex: "-1",
-          role: "dialog",
-          "aria-labelledby": "createTaskModalLabel",
-          "aria-hidden": "true"
-        }
-      },
-      [
-        _c("div", { staticClass: "modal-dialog", attrs: { role: "form" } }, [
-          _c("div", { staticClass: "modal-content" }, [
-            _vm._m(3),
-            _vm._v(" "),
-            _c("div", { staticClass: "modal-body" }, [
-              _vm.errors.length > 0
-                ? _c("div", { staticClass: "alert alert-danger" }, [
-                    _c(
-                      "ul",
-                      _vm._l(_vm.errors, function(error) {
-                        return _c("li", [_vm._v(_vm._s(error))])
-                      }),
-                      0
-                    )
-                  ])
-                : _vm._e(),
-              _vm._v(" "),
-              _c("form", { staticClass: "form", attrs: { action: "#" } }, [
-                _c("div", { staticClass: "form-group" }, [
-                  _c("label", { attrs: { for: "name" } }, [_vm._v("Name")]),
-                  _vm._v(" "),
-                  _c("input", {
-                    directives: [
-                      {
-                        name: "model",
-                        rawName: "v-model",
-                        value: _vm.task.name,
-                        expression: "task.name"
-                      }
-                    ],
-                    staticClass: "form-control",
-                    attrs: { type: "text", id: "name", name: "name" },
-                    domProps: { value: _vm.task.name },
-                    on: {
-                      input: function($event) {
-                        if ($event.target.composing) {
-                          return
-                        }
-                        _vm.$set(_vm.task, "name", $event.target.value)
-                      }
-                    }
-                  })
-                ]),
-                _vm._v(" "),
-                _c("div", { staticClass: "form-group" }, [
-                  _c("label", { attrs: { for: "body" } }, [
-                    _vm._v("Description")
-                  ]),
-                  _vm._v(" "),
-                  _c("input", {
-                    directives: [
-                      {
-                        name: "model",
-                        rawName: "v-model",
-                        value: _vm.task.body,
-                        expression: "task.body"
-                      }
-                    ],
-                    staticClass: "form-control",
-                    attrs: { type: "text", id: "body", name: "body" },
-                    domProps: { value: _vm.task.body },
-                    on: {
-                      input: function($event) {
-                        if ($event.target.composing) {
-                          return
-                        }
-                        _vm.$set(_vm.task, "body", $event.target.value)
-                      }
-                    }
-                  })
-                ])
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "modal-footer" }, [
-              _c(
-                "button",
-                {
-                  staticClass: "btn btn-secondary",
-                  attrs: { type: "button", "data-dismiss": "modal" }
-                },
-                [_vm._v("Close")]
-              ),
-              _vm._v(" "),
-              _c(
-                "button",
-                {
-                  staticClass: "btn btn-primary",
-                  attrs: { type: "button" },
-                  on: { click: _vm.createTask }
-                },
-                [_vm._v("Add Task")]
-              )
-            ])
-          ])
-        ])
-      ]
-    )
   ])
 }
 var staticRenderFns = [
@@ -36975,26 +37627,10 @@ var staticRenderFns = [
     var _vm = this
     var _h = _vm.$createElement
     var _c = _vm._self._c || _h
-    return _c("td", [
-      _c("button", { staticClass: "btn btn-info" }, [_vm._v("Edit")])
-    ])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("td", [
-      _c("button", { staticClass: "btn btn-danger" }, [_vm._v("Delete")])
-    ])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
     return _c("div", { staticClass: "modal-header" }, [
       _c(
         "h5",
-        { staticClass: "modal-title", attrs: { id: "createTaskModalLabel" } },
+        { staticClass: "modal-title", attrs: { id: "taskModalLabel" } },
         [_vm._v("Add Task")]
       ),
       _vm._v(" "),
@@ -48210,6 +48846,20 @@ module.exports = Vue;
 
 /***/ }),
 
+/***/ "./node_modules/webpack/buildin/amd-define.js":
+/*!***************************************!*\
+  !*** (webpack)/buildin/amd-define.js ***!
+  \***************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = function() {
+	throw new Error("define cannot be used indirect");
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/webpack/buildin/global.js":
 /*!***********************************!*\
   !*** (webpack)/buildin/global.js ***!
@@ -48355,6 +49005,8 @@ if (token) {
 } else {
   console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
+
+window.toastr = __webpack_require__(/*! toastr */ "./node_modules/toastr/toastr.js");
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
  * for events that are broadcast by Laravel. Echo and event broadcasting
